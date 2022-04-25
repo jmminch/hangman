@@ -1,5 +1,6 @@
 import 'dart:html';
 import 'dart:async';
+import 'dart:math';
 
 void main() {
   var g = Game();
@@ -10,9 +11,12 @@ void main() {
 class Game {
   late CanvasElement canvas;
   late CanvasRenderingContext2D cxt;
-  num lastFrame = 0.0;
-  final num updateTime = 50.0;  /* 20 FPS */
   Round? round;
+  Random random = Random();
+
+  List<String> phrases = [
+    "Hello, world!",
+    "Emerson likes neon stuff." ];
 
   Game() {
     canvas = querySelector('#canvas') as CanvasElement;
@@ -24,13 +28,8 @@ class Game {
   }
 
   void updateDisplay( num delta ) async {
-    // Check whether it's time for an update.
-    if(delta - lastFrame > updateTime) {
-      if(round != null) {  /* Should always be true */
-        round!.render(cxt);
-      }
-
-      lastFrame = delta;
+    if(round != null) {  /* Should always be true */
+      round!.render(cxt);
     }
 
     // Update on the next tick.
@@ -42,14 +41,14 @@ class Game {
       (KeyboardEvent ev) { round?.handleKeypress(ev); } );
 
     while(true) {  // Loop forever
-      round = Round();
+      round = Round(phrases[random.nextInt(phrases.length)]);
       await round!.play();
     }
   }
 }
 
 class Round {
-  String phrase = "Hello, world!";
+  String phrase;
   List<bool> guesses = List.filled(26, false);
   StreamController<int> onSelectLetter = StreamController<int>();
   int state = 0;
@@ -58,13 +57,16 @@ class Round {
        * 2 = loser */
   int misses = 0;
   final int maxMisses = 6;
+  bool dirty = true;
 
-  Round();
+  Round( this.phrase );
 
   Future<void> play() async {
-    // Pick a word -- already done.
+    dirty = true;
 
     await for(var letter in onSelectLetter.stream) {
+      dirty = true;
+
       if(guesses[letter]) {
         // Picked a letter that had already been guessed.
         continue;
@@ -114,6 +116,8 @@ class Round {
   }
 
   void render( CanvasRenderingContext2D cxt ) {
+    if(!dirty) return;
+
     // Draw a base background
     cxt.fillStyle = "pink";
     cxt.fillRect(0, 0, cxt.canvas.width!, cxt.canvas.height!);
@@ -160,5 +164,7 @@ class Round {
       cxt.fillStyle = "white";
       cxt.fillText(state == 1 ? "Winner" : "Loser", 200, 300);
     }
+
+    dirty = false;
   }
 }

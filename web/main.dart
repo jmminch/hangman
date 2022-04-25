@@ -133,9 +133,25 @@ class Round {
     // Display the phrase.
     cxt.fillStyle = "black";
     cxt.font = '48px mono';
-    cxt.fillText(String.fromCharCodes(letters), 50, 50);
+    for(int i = 0; i < letters.length; i++) {
+      cxt.fillText(String.fromCharCode(letters[i]), 50 + 40 * i, 50);
+    }
+
+    // Display used letters.
+    for(int i = 0; i < 26; i++) {
+      int x = 800 + (i % 7) * 40;
+      int y = 300 + (i ~/ 7) * 40;
+
+      cxt.fillStyle = "black";
+      cxt.fillText(String.fromCharCode(i + 65), x, y);
+      if(guesses[i]) {
+        cxt.fillStyle = "red";
+        cxt.fillText('x', x, y - 3);
+      }
+    }
 
     // Display number of misses
+    cxt.fillStyle = "black";
     cxt.fillText("Misses: ${misses}", 50, 600);
 
     if(state > 0) {

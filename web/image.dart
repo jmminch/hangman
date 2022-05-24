@@ -15,7 +15,13 @@ class ImageManager {
   }
 
   Future<void> preloadImages() async {
-    preload("round_bg");
+    preload("hangman-0");
+    preload("hangman-1");
+    preload("hangman-2");
+    preload("hangman-3");
+    preload("hangman-4");
+    preload("hangman-5");
+    preload("hangman-6");
   }
 
   void preload( String id ) {

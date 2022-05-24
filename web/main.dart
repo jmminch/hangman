@@ -158,8 +158,11 @@ class Round {
     if(!dirty) return;
 
     // Draw a base background
-    var dest = Rectangle(0, 0, cxt.canvas.width!, cxt.canvas.height!);
-    cxt.drawImageToRect(game.images.cache["round_bg"]!, dest);
+    ImageElement? background = game.images.cache["hangman-$misses"];
+    if(background != null) {
+      var dest = Rectangle(0, 0, cxt.canvas.width!, cxt.canvas.height!);
+      cxt.drawImageToRect(background, dest);
+    }
 
     // Create a phrase containing blanks for unguessed letters.
     var letters = List<int>.from(phrase.codeUnits);
@@ -174,28 +177,25 @@ class Round {
     }
 
     // Display the phrase.
-    cxt.fillStyle = "black";
+    cxt.fillStyle = "white";
     cxt.font = '48px mono';
+    int start = cxt.canvas.width! ~/ 2 - (20 * letters.length);
     for(int i = 0; i < letters.length; i++) {
-      cxt.fillText(String.fromCharCode(letters[i]), 50 + 40 * i, 50);
+      cxt.fillText(String.fromCharCode(letters[i]), start + 40 * i, 90);
     }
 
     // Display used letters.
     for(int i = 0; i < 26; i++) {
-      int x = 800 + (i % 7) * 40;
+      int x = 920 + (i % 7) * 40;
       int y = 300 + (i ~/ 7) * 40;
 
-      cxt.fillStyle = "black";
+      cxt.fillStyle = "white";
       cxt.fillText(String.fromCharCode(i + 65), x, y);
       if(guesses[i]) {
         cxt.fillStyle = "red";
         cxt.fillText('x', x, y - 3);
       }
     }
-
-    // Display number of misses
-    cxt.fillStyle = "black";
-    cxt.fillText("Misses: $misses", 50, 600);
 
     if(state > 0) {
       cxt.fillStyle = 'rgba(0, 0, 0, 0.8)';

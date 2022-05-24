@@ -2,21 +2,35 @@ import 'dart:html';
 import 'dart:async';
 import 'dart:math';
 
-void main() {
-  var g = Game();
-  g.runGame();
-  g.runDisplay();
+import 'input.dart';
+import 'image.dart';
+
+Game game = Game();
+
+void main() async {
+  await game.images.loaded.future;
+  game.runGame();
+  game.runDisplay();
 }
 
 class Game {
+  int state = 0;
+      /*  0 == title screen
+       *  1 == level select
+       *  2 == round */
+  late Round round;
+
   late CanvasElement canvas;
   late CanvasRenderingContext2D cxt;
-  Round? round;
   Random random = Random();
+
+  InputHandler input = InputHandler();
+  ImageManager images = ImageManager();
 
   List<String> phrases = [
     "Hello, world!",
-    "Emerson likes neon stuff." ];
+    "Emerson likes neon stuff.",
+    "Cuphead" ];
 
   Game() {
     canvas = querySelector('#canvas') as CanvasElement;
@@ -28,21 +42,29 @@ class Game {
   }
 
   void updateDisplay( num delta ) async {
-    if(round != null) {  /* Should always be true */
-      round!.render(cxt);
+    switch(state) {
+      case 2:  /* round */
+        round.render(cxt);
+        break;
     }
+
+    /* Outline buttons for debugging. */
+    /*
+    for(var b in input.buttons) {
+      cxt.strokeStyle = 'green';
+      cxt.strokeRect(b.x, b.y, b.w, b.h);
+    }
+    */
 
     // Update on the next tick.
     updateDisplay(await window.animationFrame);
   }
 
   void runGame() async {
-    window.onKeyDown.listen(
-      (KeyboardEvent ev) { round?.handleKeypress(ev); } );
-
     while(true) {  // Loop forever
       round = Round(phrases[random.nextInt(phrases.length)]);
-      await round!.play();
+      state = 2;
+      await round.play();
     }
   }
 }
@@ -64,8 +86,23 @@ class Round {
   Future<void> play() async {
     dirty = true;
 
-    await for(var letter in onSelectLetter.stream) {
+    /* Set up buttons. */
+    for(var i = 0; i < 26; i++) {
+      var b = Button(i, 800 + (i % 7) * 40, 265 + (i ~/ 7) * 40, 30, 35);
+      game.input.buttons.add(b);
+    }
+
+    await for(var event in game.input.events.stream) {
       dirty = true;
+
+      int letter = 0;
+      if(event.type == 0) {
+        letter = event.value - 65;
+      } else {
+        letter = event.value;
+      }
+
+      if(letter < 0 || letter > 25) continue;
 
       if(guesses[letter]) {
         // Picked a letter that had already been guessed.
@@ -87,6 +124,8 @@ class Round {
         }
       }
     }
+
+    game.input.buttons.clear();
 
     // Game over; wait 5 seconds.
     await Future.delayed(Duration(seconds: 5));
@@ -119,8 +158,8 @@ class Round {
     if(!dirty) return;
 
     // Draw a base background
-    cxt.fillStyle = "pink";
-    cxt.fillRect(0, 0, cxt.canvas.width!, cxt.canvas.height!);
+    var dest = Rectangle(0, 0, cxt.canvas.width!, cxt.canvas.height!);
+    cxt.drawImageToRect(game.images.cache["round_bg"]!, dest);
 
     // Create a phrase containing blanks for unguessed letters.
     var letters = List<int>.from(phrase.codeUnits);
@@ -156,7 +195,7 @@ class Round {
 
     // Display number of misses
     cxt.fillStyle = "black";
-    cxt.fillText("Misses: ${misses}", 50, 600);
+    cxt.fillText("Misses: $misses", 50, 600);
 
     if(state > 0) {
       cxt.fillStyle = 'rgba(0, 0, 0, 0.8)';
